@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -27,6 +28,7 @@ public class BasicPlayerController : MonoBehaviour
         
         jumpAction.performed += Jump;
         attackAction.performed += ShootWeapon;
+        attackAction.canceled += ShootWeapon;
     }
 
     private void OnApplicationFocus(bool hasFocus)
@@ -50,6 +52,7 @@ public class BasicPlayerController : MonoBehaviour
     }
     #endregion
 
+    private Camera mainCamera;
     private Transform cameraTransform;
     private Transform cameraJoint;
     private Weapon weapon;
@@ -58,9 +61,14 @@ public class BasicPlayerController : MonoBehaviour
     private Vector2 moveInput;
     private Vector2 lookInput;
     private bool isSprinting;
+    private bool isGrounded;
     
     private float pitch;
     private float yaw;
+
+    public float maxHealth = 100f;
+    private float currentHealth;
+    public float CurrentHealth => currentHealth;
     
     public float moveSpeed = 5;
     public float maxYLook = 80;
@@ -68,10 +76,13 @@ public class BasicPlayerController : MonoBehaviour
     private void Awake()
     {
         InitializeInputs(); // DO NOT REMOVE OR MOVE THIS LINE
-        rb = GetComponent<Rigidbody>();
+
+        currentHealth = maxHealth;
         
+        rb = GetComponent<Rigidbody>();
         cameraJoint = transform.Find("CameraJoint");
         cameraTransform = cameraJoint.Find("Camera");
+        mainCamera = cameraTransform.GetComponent<Camera>();
         
         weapon = GetComponentInChildren<Weapon>();
     }
@@ -79,6 +90,8 @@ public class BasicPlayerController : MonoBehaviour
     {
         UpdateValues(); // DO NOT REMOVE OR MOVE THIS LINE
 
+        CheckGrounded();
+        
         Move();
         Look();
     }
@@ -96,21 +109,42 @@ public class BasicPlayerController : MonoBehaviour
     }
     private void Jump(InputAction.CallbackContext context)
     {
-        // TODO: You should check whether player is grounded or not.
+        if (!isGrounded) return;
+        rb.AddForce(Vector3.up * 5, ForceMode.Impulse);
+    }
+    private void CheckGrounded()
+    {
+        // Check if player is grounded
+        var ray = new Ray(transform.position, Vector3.down);
+        isGrounded = Physics.Raycast(ray, 1.5f);
     }
     
     private void SetSprinting(bool value)
     {
-        // TODO: Set sprinting and maybe you want to change the FOV of the camera?
+        isSprinting = value;
+        // Change fov
+        StartCoroutine(LerpFOV(isSprinting ? 90 : 80, 0.1f));
+    }
+    
+    private IEnumerator LerpFOV(float targetFOV, float duration)
+    {
+        var startFOV = mainCamera.fieldOfView;
+        float time = 0;
+        while (time < duration)
+        {
+            time += Time.deltaTime;
+            mainCamera.fieldOfView = Mathf.Lerp(startFOV, targetFOV, time / duration);
+            yield return null;
+        }
+        mainCamera.fieldOfView = targetFOV;
     }
     
     private void Move()
     {
         Vector3 moveDirection = new Vector3(moveInput.x, 0, moveInput.y);
         moveDirection = transform.TransformDirection(moveDirection);
-        moveDirection *= isSprinting ? 2 : 1;
+        moveDirection *= isSprinting ? 1.5f : 1;
         
-        // TODO: Maybe you want to add acceleration to the player movement here instead of directly setting the velocity
         rb.linearVelocity = new Vector3(moveDirection.x * moveSpeed, rb.linearVelocity.y, moveDirection.z * moveSpeed);
     }
     
@@ -124,4 +158,20 @@ public class BasicPlayerController : MonoBehaviour
         transform.localEulerAngles = new Vector3(0, yaw, 0);
         cameraTransform.localEulerAngles = new Vector3(pitch, 0, 0);
     }
+    
+    public void TakeDamage(float damage)
+    {
+        currentHealth -= damage;
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
+    }
+    
+    private void Die()
+    {
+        // Handle player death
+        GameManager.Instance.GameOver();
+    }
+    
 }
