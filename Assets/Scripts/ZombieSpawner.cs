@@ -58,6 +58,11 @@ public class ZombieSpawner : MonoBehaviour
         do
         {
             randomPosition = GetRandomPosition();
+            // Check if position is not occupied
+            if (Physics.CheckSphere(randomPosition, 1f))
+            {
+                continue;
+            }
         }
         // Check for player proximity
         while (Vector3.Distance(randomPosition, player.position) < playerDetectionRadius);

@@ -111,6 +111,8 @@ public class BasicPlayerController : MonoBehaviour
     {
         if (!isGrounded) return;
         rb.AddForce(Vector3.up * 5, ForceMode.Impulse);
+        
+        CrosshairConfigurator.Instance.Recoil(10);
     }
     private void CheckGrounded()
     {
@@ -150,6 +152,9 @@ public class BasicPlayerController : MonoBehaviour
     
     private void Look()
     {
+        // align with time scale to make it frame rate independent
+        lookInput *= Time.deltaTime;
+        
         pitch -= lookInput.y * mouseSensitivity;
         pitch = Mathf.Clamp(pitch, -maxYLook, maxYLook);
         

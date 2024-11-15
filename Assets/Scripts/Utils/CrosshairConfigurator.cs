@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [ExecuteAlways]
 public class CrosshairConfigurator : MonoBehaviour
@@ -17,10 +18,12 @@ public class CrosshairConfigurator : MonoBehaviour
     [Range(0.1f, 10f)]
     public float thickness = 0.2f;
     
-    public float recoilAmount = 10f;
+    public float maxRecoil = 250f;
+    public float recoilMultiplier = 10f;
     public float unrecoilSpeed = 10f;
 
     private float currentGap;
+    private float unrecoilStartTime;
 
     private void Awake()
     {
@@ -56,12 +59,16 @@ public class CrosshairConfigurator : MonoBehaviour
     // recoil method
     public void Recoil(float recoilAmount)
     {
-        currentGap += recoilAmount * recoilAmount;
+        currentGap = Mathf.Clamp(currentGap + recoilMultiplier * recoilAmount, gap, maxRecoil);
+        unrecoilStartTime = Time.time + 0.1f;
     }
 
     private void Update()
-    {
-        currentGap = Mathf.Lerp(currentGap, gap, Time.deltaTime * unrecoilSpeed);
+    { 
+        if (Time.time >= unrecoilStartTime)
+        {
+            currentGap = Mathf.Lerp(currentGap, gap, Time.deltaTime * unrecoilSpeed);
+        }
         UpdatePositions();
     }
 }
